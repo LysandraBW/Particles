@@ -12,13 +12,16 @@
         <script type="importmap">
 			{
 			    "imports": {
-					"three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
-                    "jsm/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+                    "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+                    "jsm/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/",
+                    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/",
+                    "colorthief": "https://cdn.jsdelivr.net/npm/colorthief@2.4.0/dist/color-thief.mjs"   
                 }
 			}
 		</script>
   </head>
   <body>
-    <script type="module" src="index.js"></script>
+    <!-- <script type="module" src="index.js"></script> -->
+    <script type="module" src="book.js"></script>
   </body>
 </html>
