@@ -131,9 +131,13 @@ function getDarkerColor({ r, g, b }, factor = 0.4) {
 }
 
 // Renderer
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ 
+    antialias: true, 
+    alpha: true 
+});
 renderer.setSize(300, 300);
 renderer.setPixelRatio(2);
+renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
 // Camera
@@ -147,12 +151,23 @@ camera.updateProjectionMatrix();
 const scene = new THREE.Scene();
 
 // Light
-const ambientLight = new THREE.AmbientLight(0xFFFFFF);
-scene.add(ambientLight);
+const hemiLight = new THREE.HemisphereLight(0xFFFFFF, 0x444444, 3);
+scene.add(hemiLight);
 
-const directionalLight = new THREE.DirectionalLight( 0xFFFFFF, 3);
-directionalLight.position.set(300, 300, 300);
+const directionalLight = new THREE.DirectionalLight( 0xFFFFFF, 1.2);
+directionalLight.position.set(1300, 1000, 1000);
+directionalLight.castShadow = true;
 scene.add(directionalLight);
+
+const sweepLight = new THREE.SpotLight(0xff0000, 500);
+sweepLight.position.set(-250, 250, 300); // up and to the left, diagonal to the cover
+sweepLight.target.position.set(250, -100, 0); // aims toward bottom-right of the book
+sweepLight.angle = Math.PI / 2;
+sweepLight.penumbra = 0.8; // soft edge, not a hard spotlight circle
+sweepLight.decay = 2;
+sweepLight.distance = 800;
+scene.add(sweepLight);
+scene.add(sweepLight.target);
 
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -161,29 +176,59 @@ controls.enableDamping = true;
 controls.update();
 
 // Image URL
-const url1 = "https://cdn.shopify.com/s/files/1/0787/2420/2801/files/O_b33794e6-b2b6-45c6-8b82-bd06a49b32b0.jpg?v=1776744189";
+const url1 = "https://m.media-amazon.com/images/I/81Hzc23-ZcL._AC_UF1000,1000_QL80_.jpg";
 const colors = await getColorsFromImage(url1);
+
+// Material: Texture Grain
+const paperNormalMap = await (new THREE.TextureLoader()).loadAsync('./paper-rough-9-NORM.png');
+paperNormalMap.colorSpace = THREE.NoColorSpace;
+paperNormalMap.wrapS = paperNormalMap.wrapT = THREE.RepeatWrapping;
+paperNormalMap.repeat.set(4, 4);
+
+const paperNormalMap2 = await (new THREE.TextureLoader()).loadAsync('./texture4.jpg');
+paperNormalMap2.colorSpace = THREE.NoColorSpace;
+paperNormalMap2.wrapS = paperNormalMap.wrapT = THREE.RepeatWrapping;
+paperNormalMap2.repeat.set(4, 4)
 
 // Material: Texture
 const texture = await (new THREE.TextureLoader()).loadAsync(url1);
 texture.colorSpace = THREE.SRGBColorSpace;
-const textureMaterial = new THREE.MeshStandardMaterial({ map: texture });
+const textureMaterial = new THREE.MeshPhysicalMaterial({ 
+    map: texture,
+    normalMap: paperNormalMap,
+    normalScale: new THREE.Vector2(2, 3),
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.15,
+    roughness: 0.4
+});
 
 // Material: Primary Color
-const primaryMaterial = new THREE.MeshStandardMaterial();
+const primaryMaterial = new THREE.MeshPhysicalMaterial({
+    normalMap: paperNormalMap,
+    normalScale: new THREE.Vector2(2, 3),
+});
 const darkerPrimary = getDarkerColor({r: colors.primary[0], g: colors.primary[1], b: colors.primary[2]});
 primaryMaterial.color.setRGB(darkerPrimary.r, darkerPrimary.g, darkerPrimary.b);
 
 // Material: Secondary Color
-const secondaryMaterial = new THREE.MeshStandardMaterial();
+const secondaryMaterial = new THREE.MeshPhysicalMaterial({
+    normalMap: paperNormalMap,
+    normalScale: new THREE.Vector2(2, 3),
+});
 secondaryMaterial.color.setRGB(colors.secondary[0] / 255, colors.secondary[1] / 255, colors.secondary[2] / 255);
 
 // Material: Tertiary Color
-const tertiaryMaterial = new THREE.MeshStandardMaterial();
+const tertiaryMaterial = new THREE.MeshStandardMaterial({
+    roughness: 0.5,
+    metalness: 0,
+});
 tertiaryMaterial.color.setRGB(colors.tertiary[0] / 255, colors.tertiary[1] / 255, colors.tertiary[2] / 255);
 
 // Material: Quaternary Color
-const quaternaryMaterial = new THREE.MeshStandardMaterial();
+const quaternaryMaterial = new THREE.MeshPhysicalMaterial({
+    normalMap: paperNormalMap,
+    normalScale: new THREE.Vector2(2, 3),
+});
 quaternaryMaterial.color.setRGB(colors.quaternary[0] / 255, colors.quaternary[1] / 255, colors.quaternary[2] / 255);
 
 // Fonts
@@ -213,13 +258,16 @@ function BookCover(isFront) {
         new RoundedBoxGeometry(bookW, bookH, bookCoverD, 100, 100),
         primaryMaterial
     );
+    meshBackground.castShadow = true;
+    meshBackground.receiveShadow = true;
 
     // Foreground
     const meshForeground = new THREE.Mesh(
         new THREE.BoxGeometry(bookW - (bookBorderL * 2), bookH - (bookBorderL * 2), 1),
         isFront ? textureMaterial : secondaryMaterial
     );
-
+    meshForeground.castShadow = true;
+    meshForeground.receiveShadow = true;
     meshForeground.position.set(0, 0, isFront ? bookCoverD / 2 : -bookCoverD / 2);
 
     // Group and Return
@@ -235,19 +283,22 @@ function BookSpine() {
         new RoundedBoxGeometry(bookCoverD, bookH, bookD, 2, 100),
         primaryMaterial
     );
+    meshBackground.castShadow = true;
+    meshBackground.receiveShadow = true;
 
     const meshForeground = new THREE.Mesh(
         new THREE.BoxGeometry(0, bookH - (bookBorderL * 2), bookD - (bookBorderL * 2)),
         secondaryMaterial
     );
-
+    meshForeground.castShadow = true;
+    meshForeground.receiveShadow = true;
     meshForeground.position.set(-2, 0, 0);
 
     // Title
     const meshTitle = new THREE.Mesh(
         new TextGeometry('The Call of Cthulhu', {
             font: fontSansSerif,
-            size: 6,
+            size: 5,
             depth: 0,
             curveSegments: 12
         }),
@@ -290,13 +341,22 @@ function BookSpine() {
 function BookInterior() {
     const mesh = new THREE.Mesh(
         new RoundedBoxGeometry(bookInteriorW, bookInteriorH, bookInteriorD, 2, 0.005), 
-        new THREE.MeshStandardMaterial({ color: 0xFFFFFF })
+        new THREE.MeshStandardMaterial({ 
+            color: 0xFFFFFF,
+            normalMap: paperNormalMap,
+            normalScale: new THREE.Vector2(10, 15),
+            roughness: 0.5
+        })
     );
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
 
     const meshBookmark = new THREE.Mesh(
         new RoundedBoxGeometry(bookInteriorW - 5, bookInteriorH + 5, 3, 8, 8), 
         tertiaryMaterial
     );
+    meshBookmark.castShadow = true;
+    meshBookmark.receiveShadow = true;
 
     const group = new THREE.Group();
     group.add(mesh, meshBookmark);
