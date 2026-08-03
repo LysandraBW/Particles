@@ -160,6 +160,11 @@ directionalLight.position.set(-100, 100, 1000);
 directionalLight.castShadow = true;
 scene.add(directionalLight);
 
+const directionalLight2 = new THREE.DirectionalLight( 0xFFFFFF, 0.8);
+directionalLight2.position.set(0, 200, 1000);
+directionalLight2.castShadow = true;
+scene.add(directionalLight2);
+
 // Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
