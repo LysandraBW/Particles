@@ -241,11 +241,11 @@ const fontSansSerif = await fontLoader.loadAsync(fontSansSerifURL);
 // Parameters
 const textureAspect = texture.source.data.width / texture.source.data.height;
 const bookInteriorH = 192;
-const bookInteriorW = bookInteriorH * textureAspect;
+const bookInteriorW = Math.min(bookInteriorH * textureAspect, 130);
 const bookInteriorD = 30;
 const bookCoverD = 3;
 const bookH = 200;
-const bookW = bookH * textureAspect;
+const bookW = Math.min(bookH * textureAspect, 132);
 const bookD = bookInteriorD + bookCoverD * 2;
 const bookBorderL = 3;
 
